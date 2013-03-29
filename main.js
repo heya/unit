@@ -24,7 +24,7 @@
 	// container of tests
 
 	var batches = [
-		// each element is a triplet:
+		// each element is a pair:
 		// module
 		// tests --- an array of tests
 	];
@@ -33,45 +33,95 @@
 	// name --- an optional name (otherwise it is a function name)
 	// test --- a named test function
 
+	// transports for our tests
+	var silentTransport = [
+			{
+				log: raw.log
+			},
+			{
+				log: function(logger, meta, text, condition, custom){
+					if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
+						stats.failure = true;
+					}
+				}
+			},
+			{
+				filter: 300,
+				log: exceptionTransport
+			}
+		],
+		normalTransport = [
+			{
+				filter: [0, 200],
+				log: shortTransport
+			},
+			{
+				filter: 200,
+				log: consoleTransport
+			}
+		];
+	normalTransport = normalTransport.concat(silentTransport);
+
+	// update the default logger
+
+	logger.filter = 200;
+	logger.setNamedTransports("default", normalTransport);
+
 	// our custom logger to show test messages
 
 	var output = logger.getLogger();
 	output.filter = 0;
-	output.transports = [{
-		log: shortTransport
-	}];
+	output.transports = "output";
+	output.setNamedTransports("output", [{log: shortTransport}]);
 
 	// our custom tester/logger
 
-	var tester = logger.getLogger();
-	tester.filter = 0;
-	tester.transports = [
-		{
-			filter: [0, 200],
-			log: shortTransport
-		},
-		{
-			filter: 200,
-			log: consoleTransport
-		},
-		{
-			log: raw.log
-		},
-		{
-			log: function(logger, meta, text, condition, custom){
-				if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
-					stats.failure = true;
+	var normalTransport = [
+			{
+				filter: [0, 200],
+				log: shortTransport
+			},
+			{
+				filter: 200,
+				log: consoleTransport
+			},
+			{
+				log: raw.log
+			},
+			{
+				log: function(logger, meta, text, condition, custom){
+					if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
+						stats.failure = true;
+					}
 				}
+			},
+			{
+				filter: 300,
+				log: exceptionTransport
 			}
-		},
-		{
-			filter: 300,
-			log: exceptionTransport
-		}
-	];
-	// change default names
-	logger._addCond(tester, 200, "test", "t");
-	logger._addCond(tester, 300, "assert", "t");
+		],
+		silentTransport = [
+			{
+				log: raw.log
+			},
+			{
+				log: function(logger, meta, text, condition, custom){
+					if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
+						stats.failure = true;
+					}
+				}
+			},
+			{
+				filter: 300,
+				log: exceptionTransport
+			}
+		];
+
+	var tester = logger.getLogger();
+	tester.selfName = "t";
+	tester.filter = 0;
+	tester.transports = "tester";
+	tester.setNamedTransports("tester", normalTransport);
 
 	tester.batchIndex = 0;
 	tester.testIndex = 0;
@@ -216,6 +266,7 @@
 	}
 
 	function finishTests(){
+		batches = [];
 		if(stats.failedTests){
 			output.error("Failed " + stats.failedTests + " out of " + stats.totalTests + " tests.");
 		}else{
@@ -264,11 +315,10 @@
 			try{
 				if(tester.expectedLogs){
 					// turn off console-based transports
-					tester.transports[0].filter = tester.transports[1].filter = [0, 0];
+					tester.setNamedTransports("tester", silentTransport);
 				}else{
 					// turn on console-based transports as normal
-					tester.transports[0].filter = [0, 200];
-					tester.transports[1].filter = 200;
+					tester.setNamedTransports("tester", normalTransport);
 				}
 				++stats.totalTests;
 				stats.failure = false;
@@ -318,34 +368,6 @@
 	}
 
 	var run = typeof process != "undefined" ? runOnCli : runOnBrowser;
-
-	// update the default logger
-
-	logger.filter = 200;
-	logger.transports = [
-		{
-			filter: [0, 200],
-			log: shortTransport
-		},
-		{
-			filter: 200,
-			log: consoleTransport
-		},
-		{
-			log: raw.log
-		},
-		{
-			log: function(logger, meta, text, condition, custom){
-				if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
-					stats.failure = true;
-				}
-			}
-		},
-		{
-			filter: 300,
-			log: exceptionTransport
-		}
-	];
 
 	// user interface
 
