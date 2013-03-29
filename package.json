@@ -1,12 +1,13 @@
 {
-  "name": "heya-logger",
+  "name": "heya-unit",
   "version": "0.1.1",
-  "description": "Logging, debugging, and assert facility.",
+  "description": "Super simple unit test harness.",
   "main": "main.js",
   "directories": {
     "test": "tests"
   },
   "dependencies": {
+    "heya-logger": ">=0.1",
     "heya-unify": ">=0.1"
   },
   "devDependencies": {},
@@ -15,15 +16,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/heya/log.git"
+    "url": "git://github.com/heya/unit.git"
   },
   "keywords": [
-    "logging",
-    "debugging",
-    "assertion",
-    "debug",
-    "assert",
-    "log"
+    "unit testing"
   ],
   "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (http://lazutkin.com/)",
   "license": "BSD"

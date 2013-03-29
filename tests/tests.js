@@ -1,8 +1,8 @@
 (function(factory){
 	if(typeof define != "undefined"){ // AMD
-		require(["module", "../unit", "heya-unify"], factory);
+		require(["module", "../main", "heya-unify"], factory);
 	}else if(typeof module != "undefined"){ // node.js
-		factory(module, require("../unit"), require("heya-unify"));
+		factory(module, require("../main"), require("heya-unify"));
 	}
 })(function(module, unit, unify){
 	"use strict";
