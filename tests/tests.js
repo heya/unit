@@ -1,8 +1,13 @@
 (function(factory){
+	var deps = ["module", "../main"];
 	if(typeof define != "undefined"){ // AMD
-		define(["module", "../main"], factory);
+		define(deps, factory);
 	}else if(typeof module != "undefined"){ // node.js
-		factory(module, require("../main"));
+		factory.apply(null,
+			deps.filter(function(_, i){ return i < factory.length; }).
+			map(function req(name){
+				return name === "require" && require || name === "module" && module || require(name);
+			}));
 	}
 })(function(module, unit){
 	"use strict";
