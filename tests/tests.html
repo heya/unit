@@ -6,13 +6,15 @@
 		<script>
 			require.config({
 				baseUrl: ".",
+				packages: [
+					{name: "heya-logger", location: "../node_modules/heya-logger"},
+					{name: "heya-unify",  location: "../node_modules/heya-unify"}
+				],
 				paths: {
-					"domReady": "https://raw.github.com/requirejs/domReady/latest/domReady",
-					"heya-logger": "../node_modules/heya-logger/",
-					"heya-unify": "../node_modules/heya-unify/main"
+					"domReady": "https://raw.github.com/requirejs/domReady/latest/domReady"
 				}
 			});
-			require(["require", "domReady!", "./tests"], function(require){
+			require(["require", "./tests", "domReady!"], function(require){
 				var test = require("./tests");
 			});
 		</script>

@@ -1,13 +1,11 @@
 (function(factory){
 	if(typeof define != "undefined"){ // AMD
-		require(["module", "../main", "heya-unify"], factory);
+		define(["module", "../main"], factory);
 	}else if(typeof module != "undefined"){ // node.js
-		factory(module, require("../main"), require("heya-unify"));
+		factory(module, require("../main"));
 	}
-})(function(module, unit, unify){
+})(function(module, unit){
 	"use strict";
-
-	var _ = unify.any, open = unify.open;
 
 	unit.add(module, [
 		function test_simple_output(t){
@@ -24,10 +22,10 @@
 				eval(t.assert("3 < 1"));
 			},
 			logs: [
-				open({meta: open({name: "info"}), text: "Line #1"}),
-				open({meta: open({name: "warn"}), text: "Line #2"}),
-				open({meta: open({name: "test"}), condition: "5 < 2"}),
-				open({meta: open({name: "assert"}), condition: "3 < 1"})
+				{meta: {name: "info"}, text: "Line #1"},
+				{meta: {name: "warn"}, text: "Line #2"},
+				{meta: {name: "test"}, condition: "5 < 2"},
+				{meta: {name: "assert"}, condition: "3 < 1"}
 			]
 		},
 		function test_async_no_timeout(t){
@@ -65,7 +63,7 @@
 			},
 			timeout: 20,
 			logs: [
-				open({meta: open({name: "warn"})})
+				{meta: {name: "warn"}}
 			]
 		}
 	]);

@@ -2,16 +2,18 @@
 	if(typeof define != "undefined"){ // AMD
 		define(["heya-logger/test", "heya-logger/transports/raw",
 			"heya-logger/transports/short", "heya-logger/transports/console",
-			"heya-logger/transports/exception", "heya-unify"], factory);
+			"heya-logger/transports/exception", "heya-unify", "heya-unify/preprocess"],
+			factory);
 	}else if(typeof module != "undefined"){ // node.js
 		module.exports = factory(require("heya-logger/test"),
 			require("heya-logger/transports/raw"),
 			require("heya-logger/transports/short"),
 			require("heya-logger/transports/console"),
 			require("heya-logger/transports/exception"),
-			require("heya-unify"));
+			require("heya-unify"), require("heya-unify/preprocess"));
 	}
-})(function(logger, rawTransport, shortTransport, consoleTransport, exceptionTransport, unify){
+})(function(logger, rawTransport, shortTransport, consoleTransport, exceptionTransport,
+		unify, preprocess){
 	"use strict";
 
 	var raw = rawTransport(50);
@@ -201,7 +203,7 @@
 		}
 		if(tester.expectedLogs){
 			if(!stats.failure){
-				if(!unify(raw.getQueue(), tester.expectedLogs)){
+				if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
 					output.error("Unexpected log sequence " + tester.getTestName());
 					stats.failure = true;
 				}
@@ -249,7 +251,7 @@
 			tester.flyingTests = {};
 			if(tester.expectedLogs){
 				if(!stats.failure){
-					if(!unify(raw.getQueue(), tester.expectedLogs)){
+					if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
 						output.error("Unexpected log sequence " + tester.getTestName());
 						stats.failure = true;
 					}
@@ -336,7 +338,7 @@
 			}
 			if(tester.expectedLogs){
 				if(!stats.failure){
-					if(!unify(raw.getQueue(), tester.expectedLogs)){
+					if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
 						output.error("Unexpected log sequence " + tester.getTestName());
 						stats.failure = true;
 					}
