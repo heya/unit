@@ -1,22 +1,17 @@
 (function(factory){
 	if(typeof define != "undefined"){ // AMD
 		define(["heya-logger/test", "heya-logger/transports/raw",
-			"heya-logger/transports/short", "heya-logger/transports/console",
-			"heya-logger/transports/exception", "heya-unify", "heya-unify/preprocess"],
+			"heya-logger/transports/exception",
+			"heya-unify", "heya-unify/preprocess"],
 			factory);
 	}else if(typeof module != "undefined"){ // node.js
 		module.exports = factory(require("heya-logger/test"),
 			require("heya-logger/transports/raw"),
-			require("heya-logger/transports/short"),
-			require("heya-logger/transports/console"),
 			require("heya-logger/transports/exception"),
 			require("heya-unify"), require("heya-unify/preprocess"));
 	}
-})(function(logger, rawTransport, shortTransport, consoleTransport, exceptionTransport,
-		unify, preprocess){
+})(function(logger, rawTransport, exceptionTransport, unify, preprocess){
 	"use strict";
-
-	var raw = rawTransport(50);
 
 	// defaults
 
@@ -35,7 +30,92 @@
 	// name --- an optional name (otherwise it is a function name)
 	// test --- a named test function
 
-	// transports for our tests
+	// statistics
+
+	var stats = {
+			// global stats
+			totalTests:   0,
+			failedTests:  0,
+			totalChecks:  0,
+			failedChecks: 0,
+			totalAborted: 0,
+			// local stats (per test)
+			localTests:   0,
+			localFails:   0,
+			aborted:      false,
+			// methods
+			newTest: function(){
+				++this.totalTests;
+				this.localTests = this.localFails = 0;
+				this.aborted = false;
+			},
+			endTest: function(){
+				if(this.localFails || this.aborted){
+					++this.failedTests;
+					this.failedChecks += this.localFails;
+					if(this.aborted){
+						++this.totalAborted;
+					}
+				}
+			},
+			clear: function(){
+				this.totalTests = this.failedTests =
+				this.totalChecks= this.failedChecks =
+				this.totalAborted = 0;
+				this.newTest();
+			}
+		};
+
+	// count assert() and test() calls
+	// (we don't use dcl here to reduce external references)
+
+	function addCounter(logger, name){
+		var proto = logger.Logger.prototype, old = proto[name];
+		proto[name] = function(){
+			++stats.totalChecks;
+			++stats.localTests;
+			return old.apply(this, arguments);
+		};
+	}
+	addCounter(logger, "test");
+	addCounter(logger, "assert");
+
+	// prepare transports
+
+	var raw = rawTransport(50);
+
+	function shortTransport(logger, meta, text, condition, custom){
+		console.log(meta.name + ": " + (text || condition || "-") +
+			(meta.filename ? " in " + meta.filename : "") +
+			(meta.filename && meta.id && meta.filename != meta.id ? " as " + meta.id : "") +
+			(meta.level === 200 || meta.level === 300 ?
+				" @ test/assert #" + stats.localTests : "")
+		);
+	}
+
+	function consoleTransport(logger, meta, text, condition, custom){
+		console.log(meta.name + ": " + meta.level + " on " +
+			meta.time.toUTCString() + " in " + meta.filename +
+			(meta.filename !== meta.id ? " as " + meta.id : "") +
+			(meta.level === 200 || meta.level === 300 ?
+				" @ test/assert #" + stats.localTests : "")
+		);
+		if(text){
+			console.log(meta.name + ": text - " + text);
+		}
+		if(condition){
+			console.log(meta.name + ": cond - " + condition);
+		}
+		if(meta.stack){
+			console.log(meta.name + ": stack");
+			console.log(meta.stack);
+			console.log(meta.name + ": end of stack");
+		}
+		if(custom){
+			console.log(meta.name + ": custom - ", custom);
+		}
+	};
+
 	var silentTransport = [
 			{
 				log: raw.log
@@ -43,7 +123,7 @@
 			{
 				log: function(logger, meta, text, condition, custom){
 					if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
-						stats.failure = true;
+						++stats.localFails;
 					}
 				}
 			},
@@ -73,57 +153,14 @@
 
 	var output = logger.getLogger();
 	output.filter = 0;
-	output.transports = "output";
 	output.setNamedTransports("output", [{log: shortTransport}]);
+	output.transport = "output";
 
 	// our custom tester/logger
-
-	var normalTransport = [
-			{
-				filter: [0, 200],
-				log: shortTransport
-			},
-			{
-				filter: 200,
-				log: consoleTransport
-			},
-			{
-				log: raw.log
-			},
-			{
-				log: function(logger, meta, text, condition, custom){
-					if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
-						stats.failure = true;
-					}
-				}
-			},
-			{
-				filter: 300,
-				log: exceptionTransport
-			}
-		],
-		silentTransport = [
-			{
-				log: raw.log
-			},
-			{
-				log: function(logger, meta, text, condition, custom){
-					if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
-						stats.failure = true;
-					}
-				}
-			},
-			{
-				filter: 300,
-				log: exceptionTransport
-			}
-		];
 
 	var tester = logger.getLogger();
 	tester.selfName = "t";
 	tester.filter = 0;
-	tester.transports = "tester";
-	tester.setNamedTransports("tester", normalTransport);
 
 	tester.batchIndex = 0;
 	tester.testIndex = 0;
@@ -159,18 +196,7 @@
 				return;
 			}
 			// late operation
-			var test = batches[this.batchIndex].tests[this.testIndex],
-				testName = (typeof test == "function" ? test.name : test.name || test.test.name) ||
-					"anonymous";
-			tester.warn("Asynchronous operation has finished late: " + this.name +
-				" " + tester.getTestName(),
-				{
-					moduleId:  batches[this.batchIndex].module.id,
-					fileName:  batches[this.batchIndex].module.filename,
-					testName:  testName,
-					asyncName: this.name
-				}
-			);
+			output.error("Asynchronous operation has finished late: " + this.name);
 		}
 	};
 
@@ -192,7 +218,7 @@
 			name = test.name || test.test.name;
 		}
 		name = name || "anonymous";
-		id += " : " + name;
+		id += " : " + name + " @ test/assert #" + stats.localTests;
 		return (filename ? "in " + filename + " " : "") + (id ? "as " + id : "");
 	};
 
@@ -202,30 +228,21 @@
 			tester.timeout = null;
 		}
 		if(tester.expectedLogs){
-			if(!stats.failure){
+			if(!stats.localFails && !stats.aborted){
 				if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
-					output.error("Unexpected log sequence " + tester.getTestName());
-					stats.failure = true;
+					++stats.localTests;
+					++stats.localFails;
+					output.error("Unexpected log sequence");
 				}
 			}
 			tester.expectedLogs = null;
 			raw.clearQueue();
 		}
 		tester.flyingTests = {};
-		if(stats.failure){
-			++stats.failedTests;
-		}
+		stats.endTest();
 		++tester.testIndex;
 		run();
 	}
-
-	// statistics
-
-	var stats = {
-			totalTests: 0,
-			failedTests: 0,
-			failure: false
-		};
 
 	// runners
 
@@ -234,45 +251,45 @@
 			clearTimeout(tester.timeout);
 			tester.timeout = null;
 			if(tester.inFlight){
-				var test = batches[tester.batchIndex].tests[tester.testIndex],
-					testName = (typeof test == "function" ? test.name : test.name || test.test.name) ||
-						"anonymous";
-				tester.warn("Unfinished asynchronous tests: " +
-					Object.keys(tester.flyingTests).join(", ") +
-					" " + tester.getTestName(), {
-						moduleId:   batches[tester.batchIndex].module.id,
-						fileName:   batches[tester.batchIndex].module.filename,
-						testName:   testName,
-						asyncNames: tester.flyingTests
-					});
-				stats.failure = !tester.expectedLogs;
+				if(!tester.expectedLogs){
+					++stats.localTests;
+					++stats.localFails;
+				}
+				try{
+					tester.error("Unfinished asynchronous tests: " +
+						Object.keys(tester.flyingTests).join(", "));
+				}catch(e){
+					// suppress this error (it is inside of a timeout)
+				}
 			}
 			tester.inFlight = 0;
 			tester.flyingTests = {};
 			if(tester.expectedLogs){
-				if(!stats.failure){
+				if(!stats.localFails && !stats.aborted){
 					if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
-						output.error("Unexpected log sequence " + tester.getTestName());
-						stats.failure = true;
+						++stats.localTests;
+						++stats.localFails;
+						output.error("Unexpected log sequence");
 					}
 				}
 				tester.expectedLogs = null;
 				raw.clearQueue();
 			}
-			if(stats.failure){
-				++stats.failedTests;
-			}
+			stats.endTest();
 			++tester.testIndex;
 			run();
 		}, timeout);
 	}
 
 	function finishTests(){
-		batches = [];
 		if(stats.failedTests){
-			output.error("Failed " + stats.failedTests + " out of " + stats.totalTests + " tests.");
+			output.error("FAILURE: " + stats.failedTests + "/" + stats.totalTests +
+				" test functions" +
+				(stats.totalAborted ? " (aborted: " + stats.totalAborted + ")" : "") +
+				", " + stats.failedChecks + "/" + stats.totalChecks + " individual tests.");
 		}else{
-			output.info("Successfully finished " + stats.totalTests + " tests.");
+			output.info("SUCCESS: " + stats.totalTests + " test functions, " +
+				stats.totalChecks + " individual tests.");
 		}
 		if(typeof process != "undefined"){
 			process.exit(stats.failedTests ? 1 : 0);
@@ -281,6 +298,8 @@
 				window.callPhantom(stats.failedTests ? "failure" : "success");
 			}
 		}
+		batches = [];
+		stats.clear();
 	}
 
 	function runTest(){
@@ -317,19 +336,18 @@
 			try{
 				if(tester.expectedLogs){
 					// turn off console-based transports
-					tester.setNamedTransports("tester", silentTransport);
+					//tester.setNamedTransports("default", silentTransport);
 				}else{
 					// turn on console-based transports as normal
-					tester.setNamedTransports("tester", normalTransport);
+					tester.setNamedTransports("default", normalTransport);
 				}
-				++stats.totalTests;
-				stats.failure = false;
+				stats.newTest();
 				raw.clearQueue();
 				f(tester);
 			}catch(error){
 				if(!tester.expectedLogs){
-					stats.failure = true;
-					output.error(error);
+					stats.aborted = true;
+					tester.error(error);
 				}
 			}
 			if(tester.inFlight){
@@ -337,18 +355,17 @@
 				return false;
 			}
 			if(tester.expectedLogs){
-				if(!stats.failure){
+				if(!stats.localFails && !stats.aborted){
 					if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
-						output.error("Unexpected log sequence " + tester.getTestName());
-						stats.failure = true;
+						++stats.localTests;
+						++stats.localFails;
+						output.error("Unexpected log sequence");
 					}
 				}
 				tester.expectedLogs = null;
 				raw.clearQueue();
 			}
-			if(stats.failure){
-				++stats.failedTests;
-			}
+			stats.endTest();
 			tester.flyingTests = {};
 		}
 		// advance the loop

@@ -63,7 +63,7 @@
 			},
 			timeout: 20,
 			logs: [
-				{meta: {name: "warn"}}
+				{meta: {name: "error"}}
 			]
 		}
 	]);
