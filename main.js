@@ -88,7 +88,7 @@
 		console.log(meta.name + ": " + (text || condition || "-") +
 			(meta.filename ? " in " + meta.filename : "") +
 			(meta.filename && meta.id && meta.filename != meta.id ? " as " + meta.id : "") +
-			(meta.level === 200 || meta.level === 300 ?
+			(meta.level >= 200 && meta.level <= 300 ?
 				" @ test/assert #" + stats.localTests : "")
 		);
 	}
@@ -97,7 +97,7 @@
 		console.log(meta.name + ": " + meta.level + " on " +
 			meta.time.toUTCString() + " in " + meta.filename +
 			(meta.filename !== meta.id ? " as " + meta.id : "") +
-			(meta.level === 200 || meta.level === 300 ?
+			(meta.level >= 200 && meta.level <= 300 ?
 				" @ test/assert #" + stats.localTests : "")
 		);
 		if(text){
@@ -122,7 +122,7 @@
 			},
 			{
 				log: function(logger, meta, text, condition, custom){
-					if(!tester.expectedLogs && meta.level >= 200){ // test, assert, error
+					if(!tester.expectedLogs && meta.level >= 200 && meta.level <= 300){ // test, assert
 						++stats.localFails;
 					}
 				}
@@ -286,10 +286,10 @@
 			output.error("FAILURE: " + stats.failedTests + "/" + stats.totalTests +
 				" test functions" +
 				(stats.totalAborted ? " (aborted: " + stats.totalAborted + ")" : "") +
-				", " + stats.failedChecks + "/" + stats.totalChecks + " individual tests.");
+				" with " + stats.failedChecks + "/" + stats.totalChecks + " individual tests");
 		}else{
 			output.info("SUCCESS: " + stats.totalTests + " test functions, " +
-				stats.totalChecks + " individual tests.");
+				stats.totalChecks + " individual tests");
 		}
 		if(typeof process != "undefined"){
 			process.exit(stats.failedTests ? 1 : 0);
@@ -347,7 +347,11 @@
 			}catch(error){
 				if(!tester.expectedLogs){
 					stats.aborted = true;
-					tester.error(error);
+					try{
+						tester.error(error);
+					}catch(e){
+						// suppress
+					}
 				}
 			}
 			if(tester.inFlight){
