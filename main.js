@@ -204,7 +204,7 @@
 		return new FlightTicket(name, this, this.batchIndex, this.testIndex);
 	};
 
-	tester.getTestName = function getTestName(){
+	tester.getTestName = function getTestName(noLocalTests){
 		var testName = "";
 		if(this.batchIndex >= batches.length){ return ""; }
 		var batch = batches[this.batchIndex],
@@ -218,7 +218,10 @@
 			name = test.name || test.test.name;
 		}
 		name = name || "anonymous";
-		id += " : " + name + " @ test/assert #" + stats.localTests;
+		id += " : " + name;
+		if(!noLocalTests){
+			id += " @ test/assert #" + stats.localTests;
+		}
 		return (filename ? "in " + filename + " " : "") + (id ? "as " + id : "");
 	};
 
@@ -232,7 +235,7 @@
 				if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
 					++stats.localTests;
 					++stats.localFails;
-					output.error("Unexpected log sequence");
+					output.error("Unexpected log sequence " + tester.getTestName(true));
 				}
 			}
 			tester.expectedLogs = null;
@@ -269,7 +272,7 @@
 					if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
 						++stats.localTests;
 						++stats.localFails;
-						output.error("Unexpected log sequence");
+						output.error("Unexpected log sequence " + tester.getTestName(true));
 					}
 				}
 				tester.expectedLogs = null;
@@ -363,7 +366,7 @@
 					if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
 						++stats.localTests;
 						++stats.localFails;
-						output.error("Unexpected log sequence");
+						output.error("Unexpected log sequence " + tester.getTestName(true));
 					}
 				}
 				tester.expectedLogs = null;
