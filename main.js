@@ -236,6 +236,7 @@
 					++stats.localTests;
 					++stats.localFails;
 					output.error("Unexpected log sequence " + tester.getTestName(true));
+					printRawLogs();
 				}
 			}
 			tester.expectedLogs = null;
@@ -273,6 +274,7 @@
 						++stats.localTests;
 						++stats.localFails;
 						output.error("Unexpected log sequence " + tester.getTestName(true));
+						printRawLogs();
 					}
 				}
 				tester.expectedLogs = null;
@@ -303,6 +305,20 @@
 		}
 		batches = [];
 		stats.clear();
+	}
+
+	function printRawLogs(){
+		var logs = raw.getQueue();
+		output.info("Got " + logs.length + " record" +
+			(logs.length != 11 && logs.length % 10 == 1 ? "" : "s") + ":");
+		for(var i = 0; i < logs.length; ++i){
+			var log = logs[i];
+			output.info(log.meta.name + ": " + (log.text || log.condition || "-") +
+				(log.meta.filename ? " in " + log.meta.filename : "") +
+				(log.meta.filename && log.meta.id && log.meta.filename != log.meta.id ?
+					" as " + log.meta.id : ""));
+		}
+		output.info("=====");
 	}
 
 	function runTest(){
@@ -339,7 +355,7 @@
 			try{
 				if(tester.expectedLogs){
 					// turn off console-based transports
-					//tester.setNamedTransports("default", silentTransport);
+					tester.setNamedTransports("default", silentTransport);
 				}else{
 					// turn on console-based transports as normal
 					tester.setNamedTransports("default", normalTransport);
@@ -348,13 +364,13 @@
 				raw.clearQueue();
 				f(tester);
 			}catch(error){
+				try{
+					tester.error(error);
+				}catch(e){
+					// suppress
+				}
 				if(!tester.expectedLogs){
 					stats.aborted = true;
-					try{
-						tester.error(error);
-					}catch(e){
-						// suppress
-					}
 				}
 			}
 			if(tester.inFlight){
@@ -367,6 +383,7 @@
 						++stats.localTests;
 						++stats.localFails;
 						output.error("Unexpected log sequence " + tester.getTestName(true));
+						printRawLogs();
 					}
 				}
 				tester.expectedLogs = null;
