@@ -30,7 +30,8 @@
 				{meta: {name: "info"}, text: "Line #1"},
 				{meta: {name: "warn"}, text: "Line #2"},
 				{meta: {name: "test"}, condition: "5 < 2"},
-				{meta: {name: "assert"}, condition: "3 < 1"}
+				{meta: {name: "assert"}, condition: "3 < 1"},
+				{meta: {name: "error"}, text: "ASSERT: 3 < 1"}
 			]
 		},
 		function test_async_no_timeout(t){
