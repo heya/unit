@@ -1,16 +1,16 @@
 (function(factory){
 	if(typeof define != "undefined"){ // AMD
-		define(["heya-logger/test", "heya-logger/transports/raw",
-			"heya-logger/transports/exception",
+		define(["heya-ice/test", "heya-ice/sinks/raw",
+			"heya-ice/sinks/exception",
 			"heya-unify", "heya-unify/preprocess"],
 			factory);
 	}else if(typeof module != "undefined"){ // node.js
-		module.exports = factory(require("heya-logger/test"),
-			require("heya-logger/transports/raw"),
-			require("heya-logger/transports/exception"),
+		module.exports = factory(require("heya-ice/test"),
+			require("heya-ice/sinks/raw"),
+			require("heya-ice/sinks/exception"),
 			require("heya-unify"), require("heya-unify/preprocess"));
 	}
-})(function(logger, rawTransport, exceptionTransport, unify, preprocess){
+})(function(logger, rawSink, exceptionSink, unify, preprocess){
 	"use strict";
 
 	// defaults
@@ -82,9 +82,9 @@
 
 	// prepare transports
 
-	var raw = rawTransport(50);
+	var raw = rawSink(50);
 
-	function shortTransport(logger, meta, text, condition, custom){
+	function shortSink(logger, meta, text, condition, custom){
 		console.log(meta.name + ": " + (text || condition || "-") +
 			(meta.filename ? " in " + meta.filename : "") +
 			(meta.filename && meta.id && meta.filename != meta.id ? " as " + meta.id : "") +
@@ -93,7 +93,7 @@
 		);
 	}
 
-	function consoleTransport(logger, meta, text, condition, custom){
+	function consoleSink(logger, meta, text, condition, custom){
 		console.log(meta.name + ": " + meta.level + " on " +
 			meta.time.toUTCString() + " in " + meta.filename +
 			(meta.filename !== meta.id ? " as " + meta.id : "") +
@@ -129,17 +129,17 @@
 			},
 			{
 				filter: 300,
-				log: exceptionTransport
+				log: exceptionSink
 			}
 		],
 		normalTransport = [
 			{
 				filter: [0, 200],
-				log: shortTransport
+				log: shortSink
 			},
 			{
 				filter: 200,
-				log: consoleTransport
+				log: consoleSink
 			}
 		];
 	normalTransport = normalTransport.concat(silentTransport);
@@ -153,7 +153,7 @@
 
 	var output = logger.getLogger();
 	output.filter = 0;
-	output.setNamedTransports("output", [{log: shortTransport}]);
+	output.setNamedTransports("output", [{log: shortSink}]);
 	output.transport = "output";
 
 	// our custom tester/logger

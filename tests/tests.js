@@ -1,15 +1,13 @@
-(function(factory){
-	var deps = ["module", "../main"];
-	if(typeof define != "undefined"){ // AMD
+/* UMD */ (function(deps, factory){
+	if(typeof define != "undefined"){
 		define(deps, factory);
-	}else if(typeof module != "undefined"){ // node.js
+	}else if(typeof module != "undefined"){
 		factory.apply(null,
-			deps.filter(function(_, i){ return i < factory.length; }).
-			map(function req(name){
+			deps.map(function req(name){
 				return name === "require" && require || name === "module" && module || require(name);
 			}));
 	}
-})(function(module, unit){
+})(["module", "../main"], function(module, unit){
 	"use strict";
 
 	unit.add(module, [
