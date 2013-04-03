@@ -1,13 +1,5 @@
-/* UMD */ (function(deps, factory){
-	if(typeof define != "undefined"){
-		define(deps, factory);
-	}else if(typeof module != "undefined"){
-		factory.apply(null,
-			deps.map(function req(name){
-				return name === "require" && require || name === "module" && module || require(name);
-			}));
-	}
-})(["module", "../main"], function(module, unit){
+/* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
+(["module", "../main"], function(module, unit){
 	"use strict";
 
 	unit.add(module, [

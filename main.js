@@ -1,16 +1,7 @@
-(function(factory){
-	if(typeof define != "undefined"){ // AMD
-		define(["heya-ice/test", "heya-ice/sinks/raw",
-			"heya-ice/sinks/exception",
-			"heya-unify", "heya-unify/preprocess"],
-			factory);
-	}else if(typeof module != "undefined"){ // node.js
-		module.exports = factory(require("heya-ice/test"),
-			require("heya-ice/sinks/raw"),
-			require("heya-ice/sinks/exception"),
-			require("heya-unify"), require("heya-unify/preprocess"));
-	}
-})(function(logger, rawSink, exceptionSink, unify, preprocess){
+/* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
+(["heya-ice/test", "heya-ice/sinks/raw", "heya-ice/sinks/exception",
+	"heya-unify", "heya-unify/preprocess"],
+function(logger, rawSink, exceptionSink, unify, preprocess){
 	"use strict";
 
 	// defaults
