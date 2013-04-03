@@ -69,7 +69,9 @@ function(ice, rawSink, exceptionSink, unify, preprocess){
 		};
 	}
 	addCounter(ice, "test");
+	addCounter(ice, "TEST");
 	addCounter(ice, "assert");
+	addCounter(ice, "ASSERT");
 
 	// prepare transports
 
