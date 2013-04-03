@@ -1,7 +1,7 @@
 /* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
 (["heya-ice/test", "heya-ice/sinks/raw", "heya-ice/sinks/exception",
 	"heya-unify", "heya-unify/preprocess"],
-function(logger, rawSink, exceptionSink, unify, preprocess){
+function(ice, rawSink, exceptionSink, unify, preprocess){
 	"use strict";
 
 	// defaults
@@ -60,22 +60,22 @@ function(logger, rawSink, exceptionSink, unify, preprocess){
 	// count assert() and test() calls
 	// (we don't use dcl here to reduce external references)
 
-	function addCounter(logger, name){
-		var proto = logger.Logger.prototype, old = proto[name];
+	function addCounter(ice, name){
+		var proto = ice.Ice.prototype, old = proto[name];
 		proto[name] = function(){
 			++stats.totalChecks;
 			++stats.localTests;
 			return old.apply(this, arguments);
 		};
 	}
-	addCounter(logger, "test");
-	addCounter(logger, "assert");
+	addCounter(ice, "test");
+	addCounter(ice, "assert");
 
 	// prepare transports
 
 	var raw = rawSink(50);
 
-	function shortSink(logger, meta, text, condition, custom){
+	function shortSink(ice, meta, text, condition, custom){
 		console.log(meta.name + ": " + (text || condition || "-") +
 			(meta.filename ? " in " + meta.filename : "") +
 			(meta.filename && meta.id && meta.filename != meta.id ? " as " + meta.id : "") +
@@ -84,7 +84,7 @@ function(logger, rawSink, exceptionSink, unify, preprocess){
 		);
 	}
 
-	function consoleSink(logger, meta, text, condition, custom){
+	function consoleSink(ice, meta, text, condition, custom){
 		console.log(meta.name + ": " + meta.level + " on " +
 			meta.time.toUTCString() + " in " + meta.filename +
 			(meta.filename !== meta.id ? " as " + meta.id : "") +
@@ -112,7 +112,7 @@ function(logger, rawSink, exceptionSink, unify, preprocess){
 				log: raw.log
 			},
 			{
-				log: function(logger, meta, text, condition, custom){
+				log: function(ice, meta, text, condition, custom){
 					if(!tester.expectedLogs && meta.level >= 200 && meta.level <= 300){ // test, assert
 						++stats.localFails;
 					}
@@ -135,21 +135,21 @@ function(logger, rawSink, exceptionSink, unify, preprocess){
 		];
 	normalTransport = normalTransport.concat(silentTransport);
 
-	// update the default logger
+	// update the default ice
 
-	logger.filter = 200;
-	logger.setNamedTransports("default", normalTransport);
+	ice.filter = 200;
+	ice.setNamedTransports("default", normalTransport);
 
-	// our custom logger to show test messages
+	// our custom ice to show test messages
 
-	var output = logger.getLogger();
+	var output = ice.specialize();
 	output.filter = 0;
 	output.setNamedTransports("output", [{log: shortSink}]);
 	output.transport = "output";
 
-	// our custom tester/logger
+	// our custom tester/ice
 
-	var tester = logger.getLogger();
+	var tester = ice.specialize();
 	tester.selfName = "t";
 	tester.filter = 0;
 
@@ -171,7 +171,7 @@ function(logger, rawSink, exceptionSink, unify, preprocess){
 	}
 
 	FlightTicket.prototype = {
-		declaredClass: "logger/unit/FlightTicket",
+		declaredClass: "ice/unit/FlightTicket",
 		onTime: function(){
 			return this.batchIndex === this.tester.batchIndex &&
 				this.testIndex === this.tester.testIndex;

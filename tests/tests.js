@@ -6,15 +6,15 @@
 		function test_simple_output(t){
 			t.info("Line #1");
 			t.warn("Line #2");
-			eval(t.test("2 < 5"));
-			eval(t.assert("1 < 3"));
+			eval(t.TEST("2 < 5"));
+			eval(t.ASSERT("1 < 3"));
 		},
 		{
 			test: function test_matching_logs(t){
 				t.info("Line #1");
 				t.warn("Line #2");
-				eval(t.test("5 < 2"));
-				eval(t.assert("3 < 1"));
+				eval(t.TEST("5 < 2"));
+				eval(t.ASSERT("3 < 1"));
 			},
 			logs: [
 				{meta: {name: "info"}, text: "Line #1"},
@@ -30,14 +30,14 @@
 				f2 = t.startAsync("async2");
 			}, 20);
 			setTimeout(function(){
-				eval(t.assert("f1.onTime()"));
-				eval(t.test("1 < 2"));
+				eval(t.ASSERT("f1.onTime()"));
+				eval(t.TEST("1 < 2"));
 				f1.done();
 			}, 40);
 			setTimeout(function(){
-				eval(t.assert("f2"));
-				eval(t.assert("f2.onTime()"));
-				eval(t.test("1 < 2"));
+				eval(t.ASSERT("f2"));
+				eval(t.ASSERT("f2.onTime()"));
+				eval(t.TEST("1 < 2"));
 				f2.done();
 			}, 60);
 		},
@@ -48,12 +48,12 @@
 					f2 = t.startAsync("async2");
 				}, 20);
 				setTimeout(function(){
-					eval(t.assert("!f1.onTime()"));
+					eval(t.ASSERT("!f1.onTime()"));
 					//f1.done();
 				}, 40);
 				setTimeout(function(){
-					eval(t.assert("f2"));
-					eval(t.assert("!f2.onTime()"));
+					eval(t.ASSERT("f2"));
+					eval(t.ASSERT("!f2.onTime()"));
 					//f2.done();
 				}, 60);
 			},
