@@ -155,6 +155,8 @@ function(ice, rawSink, exceptionSink, unify, preprocess){
 	tester.selfName = "t";
 	tester.filter = 0;
 
+	tester.unify = unify;
+
 	tester.batchIndex = 0;
 	tester.testIndex = 0;
 	tester.inFlight = 0;
