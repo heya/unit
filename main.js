@@ -1,6 +1,6 @@
 /* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
 (["heya-ice/test", "heya-ice/sinks/raw", "heya-ice/sinks/exception",
-	"heya-unify", "heya-unify/preprocess"],
+	"heya-unify", "heya-unify/utils/preprocess"],
 function(ice, rawSink, exceptionSink, unify, preprocess){
 	"use strict";
 
