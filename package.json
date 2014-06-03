@@ -1,6 +1,6 @@
 {
   "name": "heya-unit",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Super simple unit test harness.",
   "main": "main.js",
   "directories": {
@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "heya-ice": ">=0.1",
-    "heya-unify": ">=0.1"
+    "heya-unify": ">=0.2"
   },
   "devDependencies": {},
   "scripts": {
