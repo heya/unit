@@ -24,6 +24,51 @@
 				{meta: {name: "error"}, text: "ASSERT: 3 < 1"}
 			]
 		},
+		{
+			test: function test_matching_text(t){
+				t.info("Line #1");
+				t.warn("Line #2");
+				eval(t.TEST("5 < 2"));
+				eval(t.ASSERT("3 < 1"));
+			},
+			logs: [
+				{text: "Line #1"},
+				{text: "Line #2"},
+				{condition: "5 < 2"},
+				{condition: "3 < 1"},
+				{text: "ASSERT: 3 < 1"}
+			]
+		},
+		{
+			test: function test_matching_simplified_text(t){
+				t.info("Line #1");
+				t.warn("Line #2");
+				eval(t.TEST("5 < 2"));
+				eval(t.ASSERT("3 < 1"));
+			},
+			logs: [
+				"Line #1",
+				"Line #2",
+				{condition: "5 < 2"},
+				{condition: "3 < 1"},
+				"ASSERT: 3 < 1"
+			]
+		},
+		{
+			test: function test_matching_simplified_regex(t){
+				t.info("Line #1");
+				t.warn("Line #2");
+				eval(t.TEST("5 < 2"));
+				eval(t.ASSERT("3 < 1"));
+			},
+			logs: [
+				/^Line/,
+				/^Line/,
+				{condition: "5 < 2"},
+				{condition: "3 < 1"},
+				/\bassert\b/i
+			]
+		},
 		function test_async_no_timeout(t){
 			var f1 = t.startAsync("async1"), f2;
 			setTimeout(function(){

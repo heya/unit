@@ -1,7 +1,7 @@
 /* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
 (["heya-ice/test", "heya-ice/sinks/raw", "heya-ice/sinks/exception",
-	"heya-unify", "heya-unify/utils/preprocess"],
-function(ice, rawSink, exceptionSink, unify, preprocess){
+	"heya-unify", "heya-unify/utils/preprocess", "heya-unify/unifiers/matchString"],
+function(ice, rawSink, exceptionSink, unify, preprocess, matchString){
 	"use strict";
 
 	// defaults
@@ -341,7 +341,7 @@ function(ice, rawSink, exceptionSink, unify, preprocess){
 			f = test.test;
 			name = test.name || f.name;
 			timeout = test.timeout;
-			tester.expectedLogs = test.logs;
+			tester.expectedLogs = processLogs(test.logs);
 		}
 		timeout = timeout || DEFAULT_ASYNC_TIMEOUT;
 		name = name || "anonymous";
@@ -390,6 +390,25 @@ function(ice, rawSink, exceptionSink, unify, preprocess){
 		// advance the loop
 		++tester.testIndex;
 		return true;
+	}
+
+	function processLogs(logs){
+		if(logs instanceof Array &&
+				logs.some(function(record){
+					return typeof record == "string" || record instanceof RegExp;
+				})
+		){
+			return logs.map(function(record){
+				if(typeof record == "string"){
+					return {text: record};
+				}
+				if(record instanceof RegExp){
+					return {text: matchString(record)};
+				}
+				return record;
+			});
+		}
+		return logs;
 	}
 
 	function runOnCli(){
