@@ -6,7 +6,7 @@ function(ice, rawSink, exceptionSink, unify, preprocess, matchString){
 
 	// defaults
 
-	var DEFAULT_ASYNC_TIMEOUT = 15000,	// in ms
+	var DEFAULT_ASYNC_TIMEOUT = 5000,	// in ms
 		DEFAULT_TEST_DELAY    = 20;		// in ms, only for browsers
 
 	// container of tests
@@ -50,8 +50,10 @@ function(ice, rawSink, exceptionSink, unify, preprocess, matchString){
 				}
 			},
 			clear: function(){
-				this.totalTests = this.failedTests =
-				this.totalChecks= this.failedChecks =
+				this.totalTests   =
+				this.failedTests  =
+				this.totalChecks  =
+				this.failedChecks =
 				this.totalAborted = 0;
 				this.newTest();
 			}
@@ -115,7 +117,7 @@ function(ice, rawSink, exceptionSink, unify, preprocess, matchString){
 			},
 			{
 				log: function(ice, meta, text, condition, custom){
-					if(!tester.expectedLogs && meta.level >= 200 && meta.level <= 300){ // test, assert
+					if(!ice.expectedLogs && meta.level >= 200 && meta.level <= 300){ // test, assert
 						++stats.localFails;
 					}
 				}
@@ -149,138 +151,6 @@ function(ice, rawSink, exceptionSink, unify, preprocess, matchString){
 	output.setNamedTransports("output", [{log: shortSink}]);
 	output.transport = "output";
 
-	// our custom tester/ice
-
-	var tester = ice.specialize();
-	tester.selfName = "t";
-	tester.filter = 0;
-
-	tester.unify = unify;
-
-	tester.batchIndex = 0;
-	tester.testIndex = 0;
-	tester.inFlight = 0;
-	tester.flyingTests = {};
-
-	// support for asynchronous operations
-
-	function FlightTicket(name, tester, batchIndex, testIndex){
-		tester.flyingTests[name] = 1;
-		++tester.inFlight;
-
-		this.name = name;
-		this.tester = tester;
-		this.batchIndex = batchIndex;
-		this.testIndex = testIndex;
-	}
-
-	FlightTicket.prototype = {
-		declaredClass: "ice/unit/FlightTicket",
-		onTime: function(){
-			return this.batchIndex === this.tester.batchIndex &&
-				this.testIndex === this.tester.testIndex;
-		},
-		done: function(){
-			if(this.onTime()){
-				// decrement the counter
-				delete this.tester.flyingTests[this.name];
-				if(!--this.tester.inFlight){
-					// if we are the last, inform the tester
-					this.tester.done();
-				}
-				return;
-			}
-			// late operation
-			output.error("Asynchronous operation has finished late: " + this.name);
-		}
-	};
-
-	tester.startAsync = function startAsync(name){
-		return new FlightTicket(name, this, this.batchIndex, this.testIndex);
-	};
-
-	tester.getTestName = function getTestName(noLocalTests){
-		var testName = "";
-		if(this.batchIndex >= batches.length){ return ""; }
-		var batch = batches[this.batchIndex],
-			id = (batch.module.mid || batch.module.id || ""),
-			filename = batch.module.filename || batch.module.uri || batch.module.url || "";
-		if(this.testIndex >= batch.tests.length){ return ""; }
-		var test = batch.tests[this.testIndex], name;
-		if(typeof test == "function"){
-			name = test.name;
-		}else if(test){
-			name = test.name || test.test.name;
-		}
-		name = name || "anonymous";
-		id += " : " + name;
-		if(!noLocalTests){
-			id += " @ test/assert #" + stats.localTests;
-		}
-		return (filename ? "in " + filename + " " : "") + (id ? "as " + id : "");
-	};
-
-	tester.done = function(){
-		if(tester.timeout){
-			clearTimeout(tester.timeout);
-			tester.timeout = null;
-		}
-		if(tester.expectedLogs){
-			if(!stats.localFails && !stats.aborted){
-				if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
-					++stats.localTests;
-					++stats.localFails;
-					output.error("Unexpected log sequence " + tester.getTestName(true));
-					printRawLogs();
-				}
-			}
-			tester.expectedLogs = null;
-			raw.clearQueue();
-		}
-		tester.flyingTests = {};
-		stats.endTest();
-		++tester.testIndex;
-		run();
-	}
-
-	// runners
-
-	function waitForAsync(timeout){
-		tester.timeout = setTimeout(function(){
-			clearTimeout(tester.timeout);
-			tester.timeout = null;
-			if(tester.inFlight){
-				if(!tester.expectedLogs){
-					++stats.localTests;
-					++stats.localFails;
-				}
-				try{
-					tester.error("Unfinished asynchronous tests: " +
-						Object.keys(tester.flyingTests).join(", "));
-				}catch(e){
-					// suppress this error (it is inside of a timeout)
-				}
-			}
-			tester.inFlight = 0;
-			tester.flyingTests = {};
-			if(tester.expectedLogs){
-				if(!stats.localFails && !stats.aborted){
-					if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
-						++stats.localTests;
-						++stats.localFails;
-						output.error("Unexpected log sequence " + tester.getTestName(true));
-						printRawLogs();
-					}
-				}
-				tester.expectedLogs = null;
-				raw.clearQueue();
-			}
-			stats.endTest();
-			++tester.testIndex;
-			run();
-		}, timeout);
-	}
-
 	function finishTests(){
 		if(stats.failedTests){
 			output.error("FAILURE: " + stats.failedTests + "/" + stats.totalTests +
@@ -305,99 +175,268 @@ function(ice, rawSink, exceptionSink, unify, preprocess, matchString){
 	function printRawLogs(){
 		var logs = raw.getQueue();
 		output.info("Got " + logs.length + " record" +
-			(logs.length != 11 && logs.length % 10 == 1 ? "" : "s") + ":");
+					(logs.length != 11 && logs.length % 10 == 1 ? "" : "s") + ":");
 		for(var i = 0; i < logs.length; ++i){
 			var log = logs[i];
 			output.info(log.meta.name + ": " + (log.text || log.condition || "-") +
-				(log.meta.filename ? " in " + log.meta.filename : "") +
-				(log.meta.filename && log.meta.id && log.meta.filename != log.meta.id ?
-					" as " + log.meta.id : ""));
+						(log.meta.filename ? " in " + log.meta.filename : "") +
+						(log.meta.filename && log.meta.id && log.meta.filename != log.meta.id ?
+						 " as " + log.meta.id : ""));
 		}
 		output.info("=====");
 	}
 
-	function runTest(){
-		var test, timeout, name, f;
-		// open loop
-		loop: {
-			for(; tester.batchIndex < batches.length; ++tester.batchIndex, tester.testIndex = 0){
-				var batch = batches[tester.batchIndex];
-				for(; tester.testIndex < batch.tests.length; ++tester.testIndex){
-					test = batch.tests[tester.testIndex];
-					break loop;
+	// our custom tester/ice
+
+	var tester = ice.specialize();
+	tester.selfName = "t";
+	tester.filter = 0;
+
+	tester.unify = unify;
+
+	tester.batchIndex = 0;
+	tester.testIndex = 0;
+	tester.inFlight = 0;
+	tester.flyingTests = {};
+
+	// support for asynchronous operations
+
+	function FlightTicket(tester, name, count){
+		this.tester = tester;
+		this.name = name;
+
+		count = Math.max(count || 1, 1);
+		if(typeof tester.flyingTests[name] == "number"){
+			tester.flyingTests[name] += count;
+		}else{
+			tester.flyingTests[name] = count;
+		}
+		tester.inFlight += count;
+	}
+
+	FlightTicket.prototype = {
+		declaredClass: "heya-unit/FlightTicket",
+		onTime: function(){
+			return !this.tester.isDone();
+		},
+		done: function(){
+			if(this.tester.isDone()){
+				// late operation
+				output.error("Asynchronous operation has finished late: " + this.name);
+			}else{
+				// decrement the counter
+				if(this.tester.flyingTests[this.name] > 0){
+					--this.tester.flyingTests[this.name];
+					if(!--this.tester.inFlight){
+						// if we are the last, inform the tester
+						this.tester.done();
+					}
+				}else{
+					output.error("Asynchronous operation was marked as 'done' too many times: " + this.name);
 				}
 			}
-			finishTests();
-			return false;
 		}
-		// the loop's actual body
-		tester.meta.id = (batch.module.mid || batch.module.id || "");
-		tester.meta.filename = batch.module.filename || batch.module.uri || batch.module.url || "";
+	};
+
+	tester.startAsync = function startAsync(name, count){
+		return new FlightTicket(this, name, count);
+	};
+
+	tester.isDone = function isDone(){
+		return this.inFlight == 0;
+	};
+
+	tester.getTestName = function getTestName(noLocalTests){
+		if(this.batchIndex >= batches.length){ return ""; }
+		var batch = batches[this.batchIndex],
+			id = (batch.module.mid || batch.module.id || ""),
+			filename = batch.module.filename || batch.module.uri || batch.module.url || "";
+		if(this.testIndex >= batch.tests.length){ return ""; }
+		var test = batch.tests[this.testIndex], name;
+		if(typeof test == "function"){
+			name = test.name;
+		}else if(test){
+			name = test.name || test.test.name;
+		}
+		name = name || "anonymous";
+		id += " : " + name;
+		if(!noLocalTests){
+			id += " @ test/assert #" + stats.localTests;
+		}
+		return (filename ? "in " + filename + " " : "") + (id ? "as " + id : "");
+	};
+
+	tester.done = function(){
+		if(this.timeout){
+			clearTimeout(this.timeout);
+			this.timeout = null;
+			if(this.expectedLogs){
+				if(!stats.localFails && !stats.aborted){
+					if(!unify(raw.getQueue(), preprocess(this.expectedLogs, true))){
+						++stats.localTests;
+						++stats.localFails;
+						output.error("Unexpected log sequence " + this.getTestName(true));
+						printRawLogs();
+					}
+				}
+				this.expectedLogs = null;
+				raw.clearQueue();
+			}
+			this.flyingTests = {};
+			stats.endTest();
+			runTests(this.next());
+		}
+	}
+
+	tester.wait = function wait(timeout){
+		if(this.timeout){
+			this.error("Trying to set a timeout for the second time");
+			return;
+		}
+		this.timeout = setTimeout(function(){
+			this.timeout = null;
+			if(this.inFlight){
+				if(!this.expectedLogs){
+					++stats.localTests;
+					++stats.localFails;
+				}
+				try{
+					this.error("Unfinished asynchronous tests: " +
+						Object.keys(this.flyingTests).filter(function(key){
+							return this.flyingTests[key] > 0;
+						}, this).join(", "));
+				}catch(e){
+					// suppress this error (it is inside of a timeout)
+				}
+			}
+			this.inFlight = 0;
+			if(this.expectedLogs){
+				if(!stats.localFails && !stats.aborted){
+					if(!unify(raw.getQueue(), preprocess(this.expectedLogs, true))){
+						++stats.localTests;
+						++stats.localFails;
+						output.error("Unexpected log sequence " + this.getTestName(true));
+						printRawLogs();
+					}
+				}
+				this.expectedLogs = null;
+				raw.clearQueue();
+			}
+			stats.endTest();
+			runTests(this.next());
+		}.bind(this), timeout);
+	};
+
+	tester.next = function next(){
+		var t = makeTester();
+		if(!t){
+			// finishTests() is called by makeTester()
+			return null;
+		}
+		t.batchIndex = this.batchIndex;
+		t.testIndex  = this.testIndex + 1;
+
+		// test new indices
+		if(t.batchIndex >= batches.length){
+			finishTests();
+			return null;
+		}
+		if(t.testIndex < batches[t.batchIndex].tests.length){
+			return t;
+		}
+		// otherwise: new batch
+		++t.batchIndex;
+		t.testIndex = 0;
+		// test new indices
+		if(t.batchIndex >= batches.length){
+			finishTests();
+			return null;
+		}
+		if(t.testIndex < batches[t.batchIndex].tests.length){
+			return t;
+		}
+		// no more tests
+		finishTests();
+		return null;
+	};
+
+	tester.run = function runTest(){
+		var batch = batches[this.batchIndex], test = batch.tests[this.testIndex], name, timeout, f;
+
+		this.meta.id = (batch.module.mid || batch.module.id || "");
+		this.meta.filename = batch.module.filename || batch.module.uri || batch.module.url || "";
 		if(typeof test == "function"){
 			f = test;
 			name = f.name;
-			tester.expectedLogs = null;
+			this.expectedLogs = null;
 		}else if(test){
 			f = test.test;
 			name = test.name || f.name;
 			timeout = test.timeout;
-			tester.expectedLogs = processLogs(test.logs);
+			this.expectedLogs = processLogs(test.logs);
 		}
-		timeout = timeout || DEFAULT_ASYNC_TIMEOUT;
+		timeout = isNaN(timeout) ? DEFAULT_ASYNC_TIMEOUT : Math.max(timeout, 0);
 		name = name || "anonymous";
-		tester.meta.id += " : " + name;
+		this.meta.id += " : " + name;
 		if(f){
 			try{
-				if(tester.expectedLogs){
+				if(this.expectedLogs){
 					// turn off console-based transports
-					tester.setNamedTransports("default", silentTransport);
+					this.setNamedTransports("default", silentTransport);
 				}else{
 					// turn on console-based transports as normal
-					tester.setNamedTransports("default", normalTransport);
+					this.setNamedTransports("default", normalTransport);
 				}
 				stats.newTest();
 				raw.clearQueue();
-				f(tester);
+				f(this);
 			}catch(error){
 				try{
-					tester.error(error);
+					this.error(error);
 				}catch(e){
 					// suppress
 				}
-				if(!tester.expectedLogs){
+				if(!this.expectedLogs){
 					stats.aborted = true;
 				}
 			}
-			if(tester.inFlight){
-				waitForAsync(timeout);
-				return false;
+			if(this.inFlight){
+				this.wait(timeout);
+				return null;
 			}
-			if(tester.expectedLogs){
+			if(this.expectedLogs){
 				if(!stats.localFails && !stats.aborted){
-					if(!unify(raw.getQueue(), preprocess(tester.expectedLogs, true))){
+					if(!unify(raw.getQueue(), preprocess(this.expectedLogs, true))){
 						++stats.localTests;
 						++stats.localFails;
-						output.error("Unexpected log sequence " + tester.getTestName(true));
+						output.error("Unexpected log sequence " + this.getTestName(true));
 						printRawLogs();
 					}
 				}
-				tester.expectedLogs = null;
+				this.expectedLogs = null;
 				raw.clearQueue();
 			}
 			stats.endTest();
-			tester.flyingTests = {};
 		}
-		// advance the loop
-		++tester.testIndex;
-		return true;
+		return this.next();
+	};
+
+	function makeTester(){
+		if(!batches.length || !batches[0].tests.length){
+			finishTests();
+			return null;
+		}
+		var t = Object.create(tester);
+		t.flyingTests = {};
+		return t;
 	}
 
 	function processLogs(logs){
 		if(logs instanceof Array &&
-				logs.some(function(record){
-					return typeof record == "string" || record instanceof RegExp;
-				})
-		){
+		   logs.some(function(record){
+			return typeof record == "string" || record instanceof RegExp;
+		})
+		  ){
 			return logs.map(function(record){
 				if(typeof record == "string"){
 					return {text: record};
@@ -411,25 +450,37 @@ function(ice, rawSink, exceptionSink, unify, preprocess, matchString){
 		return logs;
 	}
 
-	function runOnCli(){
-		while(runTest());
-	}
+	// runners
 
-	function runOnBrowser(){
-		if(runTest()){
-			var h = setTimeout(function(){
-				clearTimeout(h);
-				runOnBrowser();
-			}, DEFAULT_TEST_DELAY);
+	function runOnNode(test){
+		while(test){
+			test = test.run();
 		}
 	}
 
-	var run = typeof process != "undefined" ? runOnCli : runOnBrowser;
+	function runOnBrowser(test){
+		if(test){
+			test = test.run();
+			if(test){
+				setTimeout(function(){
+					runTests(test);
+				}, DEFAULT_TEST_DELAY);
+			}
+		}
+	}
+
+	var runTests = typeof process != "undefined" ? runOnNode : runOnBrowser;
 
 	// user interface
 
 	function add(module, tests){
-		batches.push({module: module, tests: tests});
+		if(tests.length){
+			batches.push({module: module, tests: tests});
+		}
+	}
+
+	function run(){
+		runTests(makeTester());
 	}
 
 	return {
