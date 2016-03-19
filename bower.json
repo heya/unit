@@ -1,0 +1,29 @@
+{
+  "name": "heya-unit",
+  "description": "Super simple unit test harness.",
+  "main": "main.js",
+  "authors": [
+    "Eugene Lazutkin <eugene.lazutkin@gmail.com> (http://lazutkin.com/)"
+  ],
+  "license": "BSD",
+  "keywords": [
+    "unit",
+    "testing"
+  ],
+  "homepage": "https://github.com/heya/unit",
+  "moduleType": [
+    "amd",
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    "coverage",
+    "*.md",
+    "AUTHORS",
+    "LICENSE"
+  ]
+}
